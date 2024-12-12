@@ -1,24 +1,54 @@
 ﻿namespace EncryptionHelper;
 
+using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-public static class EncrytptionHelper
+public class EncryptionHelper(IConfiguration configuration)
 {
-    private static readonly byte[] Key = Encoding.UTF8.GetBytes("Your32CharSecureKeyHere123456789"); // Replace with a secure key
-    private static readonly byte[] IV = Encoding.UTF8.GetBytes("Your16CharIVHere"); // Replace with a secure IV
+    private readonly byte[] Key = Encoding.UTF8.GetBytes(configuration["EncryptionKey"]!);
+    private readonly byte[] IV = Encoding.UTF8.GetBytes(configuration["EncryptionIv"]!);
 
-    public static string Encrypt(string? plainText)
+    private ICryptoTransform? encryptor;
+    private ICryptoTransform? decryptor;
+    private ICryptoTransform Encryptor
     {
-        using var aes = Aes.Create();
-        aes.Key = Key;
-        aes.IV = IV;
-        var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+        get
+        {
+            if (this.encryptor == null)
+            {
+                using var aes = Aes.Create();
+                aes.Key = this.Key;
+                aes.IV = this.IV;
+                this.encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+            }
 
+            return this.encryptor;
+        }
+    }
+
+    private ICryptoTransform Decryptor
+    {
+        get
+        {
+            if (this.decryptor == null)
+            {
+                using var aes = Aes.Create();
+                aes.Key = this.Key;
+                aes.IV = this.IV;
+                this.decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+            }
+
+            return this.decryptor;
+        }
+    }
+
+    public string Encrypt(string? plainText)
+    {
         using var ms = new MemoryStream();
-        using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+        using (var cs = new CryptoStream(ms, this.Encryptor, CryptoStreamMode.Write))
         {
             using var writer = new StreamWriter(cs);
             writer.Write(plainText);
@@ -27,15 +57,10 @@ public static class EncrytptionHelper
         return Convert.ToBase64String(ms.ToArray());
     }
 
-    public static string Decrypt(string? cipherText)
+    public string Decrypt(string? cipherText)
     {
-        using var aes = Aes.Create();
-        aes.Key = Key;
-        aes.IV = IV;
-        var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-
         using var ms = new MemoryStream(Convert.FromBase64String(cipherText!));
-        using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+        using var cs = new CryptoStream(ms, this.Decryptor, CryptoStreamMode.Read);
         using var reader = new StreamReader(cs);
         return reader.ReadToEnd();
     }
