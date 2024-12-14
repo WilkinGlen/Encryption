@@ -9,7 +9,7 @@ using System.Text;
 public class EncryptionHelper(IConfiguration configuration)
 {
     private readonly byte[] Key = Encoding.UTF8.GetBytes(configuration["EncryptionKey"]!);
-    private readonly byte[] IV = Encoding.UTF8.GetBytes(configuration["EncryptionIv"]!);
+    private readonly byte[] Iv = Encoding.UTF8.GetBytes(configuration["EncryptionIv"]!);
 
     private ICryptoTransform? encryptor;
     private ICryptoTransform? decryptor;
@@ -21,7 +21,7 @@ public class EncryptionHelper(IConfiguration configuration)
             {
                 using var aes = Aes.Create();
                 aes.Key = this.Key;
-                aes.IV = this.IV;
+                aes.IV = this.Iv;
                 this.encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
             }
 
@@ -37,7 +37,7 @@ public class EncryptionHelper(IConfiguration configuration)
             {
                 using var aes = Aes.Create();
                 aes.Key = this.Key;
-                aes.IV = this.IV;
+                aes.IV = this.Iv;
                 this.decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
             }
 
